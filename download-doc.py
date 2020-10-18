@@ -20,7 +20,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import textwrap
-import sys 
+import sys
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
@@ -52,7 +52,7 @@ def auth_and_download_body():
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
-            creds = flow.run_local_server()
+            creds = flow.run_console()
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
@@ -63,13 +63,13 @@ def auth_and_download_body():
     document = service.documents().get(documentId=DOCUMENT_ID).execute()
 
     print('The title of the document is: {}'.format(document.get('title')))
-    
+
     with open(DOCUMENT_PICKLE_FILE, 'wb') as body_pickle:
         pickle.dump(document.get('body'), body_pickle)
-    
+
 def process_body():
     document_body = None
-    
+
     with open(DOCUMENT_PICKLE_FILE, 'rb') as body_pickle:
         document_body = pickle.load(body_pickle)
 
@@ -82,9 +82,9 @@ def process_body():
                 pass
             else:
                 print(k)
-    
+
 p_wrap = textwrap.TextWrapper(width = 70, break_long_words = False, break_on_hyphens = False)
-            
+
 def process_paragraph(para, body_tex):
     if para['paragraphStyle']['namedStyleType'].startswith("HEADING_"):
         headingTags = {
@@ -92,9 +92,9 @@ def process_paragraph(para, body_tex):
             'HEADING_3': 'subsection',
             'HEADING_4': 'subsubsection'
         }
-        
+
         tag = headingTags[para['paragraphStyle']['namedStyleType']]
-        
+
         content = process_elements(para['elements'])
 
         latex_out = "\\%s*{%s}\n" % (tag, content)
@@ -126,9 +126,9 @@ def process_elements(elements):
         u'\u2014': '---',
         u'$': '\\$',
     }
-    
+
     content = ""
-        
+
     for e in elements:
         el_content = e['textRun']['content']
 
@@ -144,11 +144,11 @@ def process_elements(elements):
             else:
                 print("TEXT STYLE:", e['textRun']['textStyle'])
 
-            
+
         content += el_content
-        
+
     return content.strip()
-    
+
 if __name__ == '__main__':
     #if not os.path.exists(DOCUMENT_PICKLE_FILE):
     print("Downloading document ... ")
