@@ -1,4 +1,6 @@
 credentials.json
 token.pickle
 document-body-*.pickle
-document-body-*.tex
+*.tex
+__pycache__
+
