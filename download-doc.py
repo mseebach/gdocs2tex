@@ -151,9 +151,9 @@ def process_elements(elements):
     return content.strip()
 
 if __name__ == '__main__':
-    #if not os.path.exists(DOCUMENT_PICKLE_FILE):
-    print("Downloading document ... ")
-    auth_and_download_body()
+    if not os.path.exists(DOCUMENT_PICKLE_FILE):
+        print("Downloading document ... ")
+        auth_and_download_body()
 
     process_body()
 
