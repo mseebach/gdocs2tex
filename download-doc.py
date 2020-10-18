@@ -88,6 +88,7 @@ p_wrap = textwrap.TextWrapper(width = 70, break_long_words = False, break_on_hyp
 def process_paragraph(para, body_tex):
     if para['paragraphStyle']['namedStyleType'].startswith("HEADING_"):
         headingTags = {
+            'HEADING_1': 'title',
             'HEADING_2': 'section',
             'HEADING_3': 'subsection',
             'HEADING_4': 'subsubsection'
