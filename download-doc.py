@@ -22,6 +22,7 @@ from google.auth.transport.requests import Request
 import sys
 
 import converters.latex
+import converters.markdown
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
@@ -78,5 +79,7 @@ if __name__ == '__main__':
 
     if format == "latex":
         converters.latex.process_body(doc_pickle_file, out_file)
+    if format == "markdown":
+        converters.markdown.process_body(doc_pickle_file, out_file)
 
 # [END docs_quickstart]
