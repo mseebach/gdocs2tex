@@ -22,14 +22,18 @@ class MarkdownConverter():
     after_paragraph = []
 
     def __init__(self, document_body, body_md):
-        for k in document_body['content']:
-            if 'paragraph' in k:
-                self.process_paragraph(k['paragraph'], body_md)
-            elif 'sectionBreak' in k:
-                # ignore
-                pass
-            else:
-                print(k)
+        try: 
+            for k in document_body['content']:
+                if 'paragraph' in k:
+                    self.process_paragraph(k['paragraph'], body_md)
+                elif 'sectionBreak' in k:
+                    # ignore
+                    pass
+                else:
+                    print(k)
+        except BreakProcessing:
+            print("Break processing for scratch section")
+            return
 
         # body_md.write("\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>\n")
 
@@ -46,12 +50,17 @@ class MarkdownConverter():
 
             content = self.process_elements(para['elements']).strip()
 
-            body_md.write("%s %s\n" % (tag, content))
+            body_md.write("\n%s %s\n" % (tag, content))
 
         elif para['paragraphStyle']['namedStyleType'] == "NORMAL_TEXT":
             content = self.process_elements(para['elements'])
+
+            prefix = ""
+            if 'bullet' in para:
+                prefix = " - "
+
             if content != "":
-                body_md.write(content + "\n")
+                body_md.write("%s%s" % (prefix, content))
 
             for a in self.after_paragraph:
                 body_md.write(a + "\n")
@@ -62,7 +71,8 @@ class MarkdownConverter():
             pass
         else:
             print(para['paragraphStyle'])
-        #print(para)
+
+        # print(para)
 
     def process_elements(self, elements):
 
@@ -70,10 +80,7 @@ class MarkdownConverter():
 
         for e in elements:            
             if 'textRun' in e:
-                el_content = bytes(e['textRun']['content'], 'iso-8859-1').decode('iso-8859-1')
-                print(type(el_content), el_content)
-                # printable = string.ascii_letters + string.digits + string.punctuation + ' '
-                # print(''.join(c if c in printable else r'\x{0:02x}'.format(ord(c)) for c in el_content))
+                el_content = e['textRun']['content']
 
                 if e['textRun']['textStyle'] != {}:
                     # if e['textRun']['textStyle'].get('baselineOffset') == 'SUBSCRIPT':
@@ -112,14 +119,21 @@ class MarkdownConverter():
 
             elif 'horizontalRule' in e:
                 content += "------\n"
-                
+
         content = content.strip()
         if content == "":
-            return "";
+            return "\n";
+
+        if content == "===scratch":
+            raise BreakProcessing()
 
         ## exclude content in {{..}} tags
         content = re.sub("{{.*}}", "", content)
 
+        ## exclude content in [..] tags
+        content = re.sub("\[.*\]", "", content)
+
+        ## TODO: fix [] handling above if using macros
         macro = re.search("\[macro:([a-z]+)(.*)\](.*)\[/macro\]", content)
 
         out = ""
@@ -128,10 +142,11 @@ class MarkdownConverter():
             macro_content = getattr(self, "macro_" + macro_name)(macro.groups())
             out = content.replace(macro.group(0), macro_content)
         else:
-            for l in self.p_wrap.wrap(content):
-                out += l + "\n"
+            out = "\n".join(self.p_wrap.wrap(content))
+            # for l in self.p_wrap.wrap(content):
+            #     out += l + "\n"
 
-        return out
+        return out + "\n"
 
 
     def macro_tweet(self, groups):
@@ -146,3 +161,6 @@ class MarkdownConverter():
         out += "> [↪](%s)\n" % (link)
 
         return out
+
+class BreakProcessing(Exception):
+    pass
