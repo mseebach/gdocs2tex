@@ -22,6 +22,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
 import sys
+import json
 
 import converters.latex
 import converters.markdown
@@ -62,12 +63,23 @@ def auth_and_download_body(doc_id):
         print(err)
 
 def crawl(path):
-    pass
+    for root, dirs, files in os.walk(path):
+        for filename in [os.path.join(root, f) for f in files if f == "_gdocs_sources.json"]:
+            process_sources(filename, root)
 
-def download(doc_id, out_file):
+def process_sources(filename, root):
+    print("Processing", filename)
+    sources = json.load(open(filename, "r"))
+    for source in sources:
+        doc_id = source['doc_id']
+        target = source['target']
+        out_file = os.path.join(root, "_%s-content.md" % (target))
+        print(doc_id, out_file)
+        save_gdoc_as_markdown(doc_id, out_file)
+
+def save_gdoc_as_markdown(doc_id, out_file):
     print("Downloading document ... ")
     doc_body = auth_and_download_body(doc_id)
-
     converters.markdown.process_body_raw(doc_body, out_file)
 
 
