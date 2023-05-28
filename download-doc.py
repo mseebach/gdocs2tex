@@ -61,26 +61,30 @@ def auth_and_download_body(doc_id):
     except HttpError as err:
         print(err)
 
+def crawl(path):
+    pass
 
-if __name__ == '__main__':
-
-    if len(sys.argv) != 4:
-        print("Usage: docker run [...] download-doc.py [doc-id] [latex,markdown] [out-file]")
-        sys.exit(1)
-
-    doc_id = sys.argv[1]
-    format = sys.argv[2]
-    out_file = sys.argv[3]
-
-    # doc_pickle_file = 'document-body-' + doc_id + '.pickle'
-
-    # if not os.path.exists(doc_pickle_file):
+def download(doc_id, out_file):
     print("Downloading document ... ")
     doc_body = auth_and_download_body(doc_id)
 
-    # if format == "latex":
-    #     converters.latex.process_body(doc_pickle_file, out_file)
-    if format == "markdown":
-        converters.markdown.process_body_raw(doc_body, out_file)
+    converters.markdown.process_body_raw(doc_body, out_file)
 
-# [END docs_quickstart]
+
+if __name__ == '__main__':
+
+    if len(sys.argv) != 3:
+        print("Usage: docker run [...] download-doc.py [doc-id] [out-file]")
+        print("Usage: docker run [...] download-doc.py crawl [path]")
+        sys.exit(1)
+
+    command = sys.argv[1] 
+
+    if command == "crawl":
+        path = sys.argv[2]
+        crawl(path)
+    else:
+        doc_id = sys.argv[1]
+        out_file = sys.argv[2]
+        download(doc_id, out_file)
+
