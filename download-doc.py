@@ -16,9 +16,11 @@
 from __future__ import print_function
 import pickle
 import os.path
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from googleapiclient.errors import HttpError
 import sys
 
 import converters.latex
@@ -27,17 +29,13 @@ import converters.markdown
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
 
-def auth_and_download_body(doc_id, doc_pickle_file):
-    """Shows basic usage of the Docs API.
-    Prints the title of a sample document.
-    """
+def auth_and_download_body(doc_id):
     creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
+    # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -45,20 +43,23 @@ def auth_and_download_body(doc_id, doc_pickle_file):
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
-            creds = flow.run_console()
+            creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
 
-    service = build('docs', 'v1', credentials=creds)
+    try:
+        service = build('docs', 'v1', credentials=creds)
 
-    # Retrieve the documents contents from the Docs service.
-    document = service.documents().get(documentId=doc_id).execute()
+        # Retrieve the documents contents from the Docs service.
+        document = service.documents().get(documentId=doc_id).execute()
 
-    print('The title of the document is: {}'.format(document.get('title')))
+        print('The title of the document is: {}'.format(document.get('title')))
 
-    with open(doc_pickle_file, 'wb') as body_pickle:
-        pickle.dump(document.get('body'), body_pickle)
+        return document.get('body')
+
+    except HttpError as err:
+        print(err)
 
 
 if __name__ == '__main__':
@@ -71,15 +72,15 @@ if __name__ == '__main__':
     format = sys.argv[2]
     out_file = sys.argv[3]
 
-    doc_pickle_file = 'document-body-' + doc_id + '.pickle'
+    # doc_pickle_file = 'document-body-' + doc_id + '.pickle'
 
-    if not os.path.exists(doc_pickle_file):
-        print("Downloading document ... ")
-        auth_and_download_body(doc_id, doc_pickle_file)
+    # if not os.path.exists(doc_pickle_file):
+    print("Downloading document ... ")
+    doc_body = auth_and_download_body(doc_id)
 
-    if format == "latex":
-        converters.latex.process_body(doc_pickle_file, out_file)
+    # if format == "latex":
+    #     converters.latex.process_body(doc_pickle_file, out_file)
     if format == "markdown":
-        converters.markdown.process_body(doc_pickle_file, out_file)
+        converters.markdown.process_body_raw(doc_body, out_file)
 
 # [END docs_quickstart]

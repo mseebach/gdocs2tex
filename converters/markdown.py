@@ -1,6 +1,7 @@
 import textwrap
 import pickle
 import re
+import string
 
 def process_body(doc_pickle_file, output_file):
     document_body = None
@@ -9,6 +10,10 @@ def process_body(doc_pickle_file, output_file):
         document_body = pickle.load(body_pickle)
         with open(output_file, 'w') as output:
             MarkdownConverter(document_body, output)
+
+def process_body_raw(document_body, output_file):
+    with open(output_file, 'w') as output:
+        MarkdownConverter(document_body, output)
 
 
 class MarkdownConverter():
@@ -26,27 +31,22 @@ class MarkdownConverter():
             else:
                 print(k)
 
-        body_md.write("\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>\n")
+        # body_md.write("\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>\n")
 
     def process_paragraph(self, para, body_md):
-        if para['paragraphStyle']['namedStyleType'].startswith("HEADING_1"):
-            content = self.process_elements(para['elements']).strip()
-            md_out = "---\nlayout: post\ntitle: \"%s\"\n---\n\n" % (content,)
-            body_md.write(md_out)
-
-        elif para['paragraphStyle']['namedStyleType'].startswith("HEADING_"):
+        if para['paragraphStyle']['namedStyleType'].startswith("HEADING_"):
             headingTags = {
-                'HEADING_2': '###',
-                'HEADING_3': '####',
-                'HEADING_4': '#####'
+                'HEADING_1': '#',
+                'HEADING_2': '##',
+                'HEADING_3': '###',
+                'HEADING_4': '####'
             }
 
             tag = headingTags[para['paragraphStyle']['namedStyleType']]
 
             content = self.process_elements(para['elements']).strip()
 
-            latex_out = "%s %s\n" % (tag, content)
-            body_md.write(latex_out)
+            body_md.write("%s %s\n" % (tag, content))
 
         elif para['paragraphStyle']['namedStyleType'] == "NORMAL_TEXT":
             content = self.process_elements(para['elements'])
@@ -66,49 +66,53 @@ class MarkdownConverter():
 
     def process_elements(self, elements):
 
-        tweet_color = {'red': 0.2901961, 'green': 0.5254902, 'blue': 0.9098039}
-
         content = ""
 
-        for e in elements:
-            el_content = e['textRun']['content']
+        for e in elements:            
+            if 'textRun' in e:
+                el_content = bytes(e['textRun']['content'], 'iso-8859-1').decode('iso-8859-1')
+                print(type(el_content), el_content)
+                # printable = string.ascii_letters + string.digits + string.punctuation + ' '
+                # print(''.join(c if c in printable else r'\x{0:02x}'.format(ord(c)) for c in el_content))
 
-            if e['textRun']['textStyle'] != {}:
-                if e['textRun']['textStyle'].get('baselineOffset') == 'SUBSCRIPT':
-                    el_content = "\\textsubscript{%s}" % (el_content)
-                elif 'link' in e['textRun']['textStyle']:
-                    link = e['textRun']['textStyle']['link']['url']
-                    el_content = "[%s](%s)" % (el_content, link)
-                elif 'backgroundColor' in e['textRun']['textStyle'] and e['textRun']['textStyle']['backgroundColor']['color']['rgbColor'] == tweet_color:
+                if e['textRun']['textStyle'] != {}:
+                    # if e['textRun']['textStyle'].get('baselineOffset') == 'SUBSCRIPT':
+                    #     el_content = "\\textsubscript{%s}" % (el_content)
+                    # elif 'link' in e['textRun']['textStyle']:
+                    #     link = e['textRun']['textStyle']['link']['url']
+                    #     el_content = "[%s](%s)" % (el_content, link)
+                    # elif 'backgroundColor' in e['textRun']['textStyle'] and e['textRun']['textStyle']['backgroundColor']['color']['rgbColor'] == tweet_color:
 
-                    tweet_text = el_content
-                    tweet_text = tweet_text[0].upper() + tweet_text[1:]
+                    #     tweet_text = el_content
+                    #     tweet_text = tweet_text[0].upper() + tweet_text[1:]
 
-                    if len(tweet_text) > 237:
-                        print("Tweet too long (by %s): %s" % (len(tweet_text) - 237, tweet_text))
+                    #     if len(tweet_text) > 237:
+                    #         print("Tweet too long (by %s): %s" % (len(tweet_text) - 237, tweet_text))
 
-                    link = ("<a href=\"https://twitter.com/share?ref_src=twsrc%5Etfw\" " +
-                              "class=\"twitter-share-button\" " +
-                              "data-text=\"&ldquo;%s&rdquo;&#010;&#010;\" " % (tweet_text) +
-                              "data-via=\"mseebach\" " +
-                              "data-dnt=\"true\" " +
-                              "data-show-count=\"false\">Tweet</a>")
+                    #     link = ("<a href=\"https://twitter.com/share?ref_src=twsrc%5Etfw\" " +
+                    #               "class=\"twitter-share-button\" " +
+                    #               "data-text=\"&ldquo;%s&rdquo;&#010;&#010;\" " % (tweet_text) +
+                    #               "data-via=\"mseebach\" " +
+                    #               "data-dnt=\"true\" " +
+                    #               "data-show-count=\"false\">Tweet</a>")
 
-                    tweet_link = ""
-                    for l in self.p_wrap.wrap(tweet_text):
-                        tweet_link += "> %s \n" % (l)
+                    #     tweet_link = ""
+                    #     for l in self.p_wrap.wrap(tweet_text):
+                    #         tweet_link += "> %s \n" % (l)
 
-                    tweet_link += "> &nbsp;&nbsp;&nbsp; %s\n" % (link)
+                    #     tweet_link += "> &nbsp;&nbsp;&nbsp; %s\n" % (link)
 
-                    self.after_paragraph.append(tweet_link)
-                elif 'backgroundColor' in e['textRun']['textStyle']:
-                    pass
-                else:
+                    #     self.after_paragraph.append(tweet_link)
+                    # elif 'backgroundColor' in e['textRun']['textStyle']:
+                    #     pass
+                    # else:
                     print("TEXT STYLE:", e['textRun']['textStyle'])
 
+                content += el_content
 
-            content += el_content
-
+            elif 'horizontalRule' in e:
+                content += "------\n"
+                
         content = content.strip()
         if content == "":
             return "";

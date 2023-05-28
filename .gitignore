@@ -5,3 +5,5 @@ document-body-*.pickle
 *.md
 __pycache__
 
+env/
+token.json
