@@ -57,7 +57,7 @@ class MarkdownConverter():
 
             prefix = ""
             if 'bullet' in para:
-                prefix = " - "
+                prefix = "- "
 
             if content != "":
                 body_md.write("%s%s" % (prefix, content))
