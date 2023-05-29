@@ -112,8 +112,13 @@ class MarkdownConverter():
                     #     self.after_paragraph.append(tweet_link)
                     # elif 'backgroundColor' in e['textRun']['textStyle']:
                     #     pass
-                    # else:
-                    print("TEXT STYLE:", e['textRun']['textStyle'])
+                    if 'italic' in e['textRun']['textStyle']:
+                        el_content = "_%s_" % (el_content)
+                    elif 'link' in e['textRun']['textStyle']:
+                        link = e['textRun']['textStyle']['link']['url']
+                        el_content = "[%s](%s)" % (el_content, link)
+                    else:
+                        print("TEXT STYLE:", e['textRun']['textStyle'])
 
                 content += el_content
 
@@ -130,10 +135,6 @@ class MarkdownConverter():
         ## exclude content in {{..}} tags
         content = re.sub("{{.*}}", "", content)
 
-        ## exclude content in [..] tags
-        content = re.sub("\[.*\]", "", content)
-
-        ## TODO: fix [] handling above if using macros
         macro = re.search("\[macro:([a-z]+)(.*)\](.*)\[/macro\]", content)
 
         out = ""
@@ -161,6 +162,20 @@ class MarkdownConverter():
         out += "> [↪](%s)\n" % (link)
 
         return out
+
+    def macro_img(self, groups):
+        img_path = groups[1].strip()
+        caption = groups[2].strip()
+
+        img_tag = """{%% include figure.html
+              path="%s"
+              class="img-fluid z-depth-1 rounded"
+              alt="%s"
+              caption="%s" %%}
+              """ % (img_path, caption, caption)
+
+        return img_tag
+
 
 class BreakProcessing(Exception):
     pass
