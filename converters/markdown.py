@@ -1,32 +1,33 @@
 import textwrap
 import pickle
 import re
-import string
+
 
 def process_body(doc_pickle_file, output_file):
     document_body = None
 
-    with open(doc_pickle_file, 'rb') as body_pickle:
+    with open(doc_pickle_file, "rb") as body_pickle:
         document_body = pickle.load(body_pickle)
-        with open(output_file, 'w') as output:
+        with open(output_file, "w") as output:
             MarkdownConverter(document_body, output)
 
+
 def process_body_raw(document_body, output_file):
-    with open(output_file, 'w') as output:
+    with open(output_file, "w") as output:
         MarkdownConverter(document_body, output)
 
 
-class MarkdownConverter():
+class MarkdownConverter:
 
-    p_wrap = textwrap.TextWrapper(width = 70, break_long_words = False, break_on_hyphens = False)
+    p_wrap = textwrap.TextWrapper(width=70, break_long_words=False, break_on_hyphens=False)
     after_paragraph = []
 
     def __init__(self, document_body, body_md):
-        try: 
-            for k in document_body['content']:
-                if 'paragraph' in k:
-                    self.process_paragraph(k['paragraph'], body_md)
-                elif 'sectionBreak' in k:
+        try:
+            for k in document_body["content"]:
+                if "paragraph" in k:
+                    self.process_paragraph(k["paragraph"], body_md)
+                elif "sectionBreak" in k:
                     # ignore
                     pass
                 else:
@@ -38,25 +39,20 @@ class MarkdownConverter():
         # body_md.write("\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>\n")
 
     def process_paragraph(self, para, body_md):
-        if para['paragraphStyle']['namedStyleType'].startswith("HEADING_"):
-            headingTags = {
-                'HEADING_1': '#',
-                'HEADING_2': '##',
-                'HEADING_3': '###',
-                'HEADING_4': '####'
-            }
+        if para["paragraphStyle"]["namedStyleType"].startswith("HEADING_"):
+            headingTags = {"HEADING_1": "#", "HEADING_2": "##", "HEADING_3": "###", "HEADING_4": "####"}
 
-            tag = headingTags[para['paragraphStyle']['namedStyleType']]
+            tag = headingTags[para["paragraphStyle"]["namedStyleType"]]
 
-            content = self.process_elements(para['elements']).strip()
+            content = self.process_elements(para["elements"]).strip()
 
             body_md.write("\n%s %s\n" % (tag, content))
 
-        elif para['paragraphStyle']['namedStyleType'] == "NORMAL_TEXT":
-            content = self.process_elements(para['elements'])
+        elif para["paragraphStyle"]["namedStyleType"] == "NORMAL_TEXT":
+            content = self.process_elements(para["elements"])
 
             prefix = ""
-            if 'bullet' in para:
+            if "bullet" in para:
                 prefix = "- "
 
             if content != "":
@@ -66,11 +62,11 @@ class MarkdownConverter():
                 body_md.write(a + "\n")
             self.after_paragraph = []
 
-        elif para['paragraphStyle']['namedStyleType'] == "TITLE":
+        elif para["paragraphStyle"]["namedStyleType"] == "TITLE":
             # ignore
             pass
         else:
-            print(para['paragraphStyle'])
+            print(para["paragraphStyle"])
 
         # print(para)
 
@@ -78,11 +74,11 @@ class MarkdownConverter():
 
         content = ""
 
-        for e in elements:            
-            if 'textRun' in e:
-                el_content = e['textRun']['content']
+        for e in elements:
+            if "textRun" in e:
+                el_content = e["textRun"]["content"]
 
-                if e['textRun']['textStyle'] != {}:
+                if e["textRun"]["textStyle"] != {}:
                     # if e['textRun']['textStyle'].get('baselineOffset') == 'SUBSCRIPT':
                     #     el_content = "\\textsubscript{%s}" % (el_content)
                     # elif 'link' in e['textRun']['textStyle']:
@@ -112,22 +108,24 @@ class MarkdownConverter():
                     #     self.after_paragraph.append(tweet_link)
                     # elif 'backgroundColor' in e['textRun']['textStyle']:
                     #     pass
-                    if 'italic' in e['textRun']['textStyle']:
+                    if "italic" in e["textRun"]["textStyle"]:
                         el_content = "_%s_" % (el_content)
-                    elif 'link' in e['textRun']['textStyle']:
-                        link = e['textRun']['textStyle']['link']['url']
+                    elif "bold" in e["textRun"]["textStyle"]:
+                        el_content = "**%s**" % (el_content)
+                    elif "link" in e["textRun"]["textStyle"]:
+                        link = e["textRun"]["textStyle"]["link"]["url"]
                         el_content = "[%s](%s)" % (el_content, link)
                     else:
-                        print("TEXT STYLE:", e['textRun']['textStyle'])
+                        print("TEXT STYLE:", e["textRun"]["textStyle"])
 
                 content += el_content
 
-            elif 'horizontalRule' in e:
+            elif "horizontalRule" in e:
                 content += "------\n"
 
         content = content.strip()
         if content == "":
-            return "\n";
+            return "\n"
 
         if content == "===scratch":
             raise BreakProcessing()
@@ -148,7 +146,6 @@ class MarkdownConverter():
             #     out += l + "\n"
 
         return out + "\n"
-
 
     def macro_tweet(self, groups):
 
@@ -172,7 +169,11 @@ class MarkdownConverter():
               class="img-fluid z-depth-1 rounded"
               alt="%s"
               caption="%s" %%}
-              """ % (img_path, caption, caption)
+              """ % (
+            img_path,
+            caption,
+            caption,
+        )
 
         return img_tag
 
