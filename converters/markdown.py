@@ -109,9 +109,11 @@ class MarkdownConverter:
                     # elif 'backgroundColor' in e['textRun']['textStyle']:
                     #     pass
                     if "italic" in e["textRun"]["textStyle"]:
-                        el_content = "_%s_" % (el_content)
+                        el_content = "_%s_" % (el_content.strip())
                     elif "bold" in e["textRun"]["textStyle"]:
                         el_content = "**%s**" % (el_content)
+                    elif "fontSize" in e["textRun"]["textStyle"] and e["textRun"]["textStyle"]["fontSize"]["magnitude"] == 8:
+                        el_content = "<small>%s</small>" % (el_content)
                     elif "link" in e["textRun"]["textStyle"]:
                         link = e["textRun"]["textStyle"]["link"]["url"]
                         el_content = "[%s](%s)" % (el_content, link)

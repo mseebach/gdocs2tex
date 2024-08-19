@@ -14,7 +14,6 @@
 
 # [START docs_quickstart]
 from __future__ import print_function
-import pickle
 import os.path
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -28,54 +27,60 @@ import converters.latex
 import converters.markdown
 
 # If modifying these scopes, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
+SCOPES = ["https://www.googleapis.com/auth/documents.readonly"]
+
 
 def auth_and_download_body(doc_id):
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open('token.json', 'w') as token:
+        with open("token.json", "w") as token:
             token.write(creds.to_json())
 
     try:
-        service = build('docs', 'v1', credentials=creds)
+        service = build("docs", "v1", credentials=creds)
 
         # Retrieve the documents contents from the Docs service.
         document = service.documents().get(documentId=doc_id).execute()
 
-        print('The title of the document is: {}'.format(document.get('title')))
+        print("The title of the document is: {}".format(document.get("title")))
 
-        return document.get('body')
+        return document.get("body")
 
     except HttpError as err:
         print(err)
 
-def crawl(path):
+
+def crawl(path, filter):
     for root, dirs, files in os.walk(path):
         for filename in [os.path.join(root, f) for f in files if f == "_gdocs_sources.json"]:
-            process_sources(filename, root)
+            process_sources(filename, root, filter)
 
-def process_sources(filename, root):
+
+def process_sources(filename, root, filter):
     print("Processing", filename)
     sources = json.load(open(filename, "r"))
     for source in sources:
-        doc_id = source['doc_id']
-        target = source['target']
+        doc_id = source["doc_id"]
+        target = source["target"]
+        if filter and filter != target:
+            print("skipping")
+            continue
         out_file = os.path.join(root, "_%s-content.md" % (target))
         print(doc_id, out_file)
         save_gdoc_as_markdown(doc_id, out_file)
+
 
 def save_gdoc_as_markdown(doc_id, out_file):
     print("Downloading document ... ")
@@ -83,20 +88,23 @@ def save_gdoc_as_markdown(doc_id, out_file):
     converters.markdown.process_body_raw(doc_body, out_file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3:
         print("Usage: docker run [...] download-doc.py [doc-id] [out-file]")
         print("Usage: docker run [...] download-doc.py crawl [path]")
         sys.exit(1)
 
-    command = sys.argv[1] 
+    command = sys.argv[1]
 
     if command == "crawl":
         path = sys.argv[2]
-        crawl(path)
+        if len(sys.argv) == 4:
+            filter = sys.argv[3]
+        else:
+            filter = None
+        crawl(path, filter)
     else:
         doc_id = sys.argv[1]
         out_file = sys.argv[2]
         download(doc_id, out_file)
-
